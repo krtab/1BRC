@@ -7,7 +7,7 @@ static INPUT: &str = "/home/arthur/1BRC/data/measurements.txt";
 
 fn parse_line(s: &str) -> (&str, f32) {
     let (key, v) = s.split_once(';').expect("Line should be well formatted.");
-    let v = v.parse().expect("Value should be parseable as a float");
+    let v = fast_float::parse(v).expect("Value should be parseable as a float");
     (key, v)
 }
 
