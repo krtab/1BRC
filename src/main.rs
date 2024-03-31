@@ -1,5 +1,8 @@
-use std::{collections::HashMap, fs::read_to_string};
+use std::fs::read_to_string;
 
+use rustc_hash::FxHashMap;
+
+type Map<K, V> = FxHashMap<K, V>;
 static INPUT: &str = "/home/arthur/1BRC/data/measurements.txt";
 
 fn parse_line(s: &str) -> (&str, f32) {
@@ -16,7 +19,7 @@ struct Res {
 
 fn main() {
     let input_file = read_to_string(INPUT).unwrap();
-    let mut data: HashMap<&str, Vec<f32>> = HashMap::new();
+    let mut data: Map<&str, Vec<f32>> = Default::default();
     for l in input_file.lines() {
         let (k, v) = parse_line(l);
         data.entry(k).or_default().push(v);
