@@ -1,14 +1,24 @@
-use std::fs::read_to_string;
-
 use rustc_hash::FxHashMap;
 
 type Map<K, V> = FxHashMap<K, V>;
 static INPUT: &str = "/home/arthur/1BRC/data/measurements.txt";
 
-fn parse_line(s: &str) -> (&str, f32) {
-    let (key, v) = s.split_once(';').expect("Line should be well formatted.");
-    let v = fast_float::parse(v).expect("Value should be parseable as a float");
-    (key, v)
+struct Entries<'a> {
+    inner: &'a [u8],
+}
+
+impl<'a> Iterator for Entries<'a> {
+    type Item = (&'a str, f32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut it = self.inner.splitn(3, |&b| b == b';' || b == b'\n');
+        let k = it.next()?;
+        let k = std::str::from_utf8(k).expect("Correct uft8");
+        let v = it.next()?;
+        let v = fast_float::parse(v).expect("valid float");
+        self.inner = it.next().unwrap_or_default();
+        Some((k, v))
+    }
 }
 
 struct Res {
@@ -18,10 +28,9 @@ struct Res {
 }
 
 fn main() {
-    let input_file = read_to_string(INPUT).unwrap();
+    let input_file = std::fs::read(INPUT).unwrap();
     let mut data: Map<&str, Vec<f32>> = Default::default();
-    for l in input_file.lines() {
-        let (k, v) = parse_line(l);
+    for (k, v) in (Entries { inner: &input_file }) {
         data.entry(k).or_default().push(v);
     }
     let mut res = Vec::new();
