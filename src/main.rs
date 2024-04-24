@@ -1,3 +1,5 @@
+use std::io::{stdout, Write};
+
 use rustc_hash::FxHashMap;
 
 type Map<K, V> = FxHashMap<K, V>;
@@ -8,12 +10,12 @@ struct Entries<'a> {
 }
 
 impl<'a> Iterator for Entries<'a> {
-    type Item = (&'a str, f32);
+    type Item = (&'a [u8], f32);
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut it = self.inner.splitn(3, |&b| b == b';' || b == b'\n');
         let k = it.next()?;
-        let k = std::str::from_utf8(k).expect("Correct uft8");
+        // let k = std::str::from_utf8(k).expect("Correct uft8");
         let v = it.next()?;
         let v = fast_float::parse(v).expect("valid float");
         self.inner = it.next().unwrap_or_default();
@@ -30,7 +32,7 @@ struct Res {
 
 fn main() {
     let input_file = std::fs::read(INPUT).unwrap();
-    let mut data: Map<&str, Vec<f32>> = Default::default();
+    let mut data: Map<&[u8], Vec<f32>> = Default::default();
     for (k, v) in (Entries { inner: &input_file }) {
         data.entry(k)
             .or_insert_with(|| Vec::with_capacity(2000))
@@ -52,7 +54,9 @@ fn main() {
         ));
     }
     res.sort_by_key(|(k, _)| *k);
+    let mut stdout = stdout().lock();
     for (k, v) in res {
-        println!("{k}: {:.1}/{:.1}/{:.1} ({})", v.min, v.avg, v.max, v.size);
+        stdout.write_all(k).unwrap();
+        writeln!(stdout, ": {:.1}/{:.1}/{:.1} ({})", v.min, v.avg, v.max, v.size).unwrap();
     }
 }
