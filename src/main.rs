@@ -1,8 +1,12 @@
-use std::io::{stdout, Write};
+use std::{
+    hash::BuildHasherDefault,
+    io::{stdout, Write},
+    thread::{available_parallelism, ScopedJoinHandle},
+};
 
-use rustc_hash::FxHashMap;
+use dashmap::DashMap;
+use rustc_hash::FxHasher;
 
-type Map<K, V> = FxHashMap<K, V>;
 static INPUT: &str = "/home/arthur/1BRC/data/measurements.txt";
 
 struct Entries<'a> {
@@ -70,12 +74,32 @@ struct Res {
     size: usize,
 }
 
+fn split_on_inclusive_from(s: &[u8], from: usize, c: u8) -> Option<(&[u8], &[u8])> {
+    let index = from + s.get(from..)?.iter().position(|&x| x == c)?;
+    Some((&s[..index + 1], &s[index + 1..]))
+}
+
 fn main() {
     let input_file = std::fs::read(INPUT).unwrap();
-    let mut data: Map<&[u8], Acc> = Default::default();
-    for (k, v) in (Entries { inner: &input_file }) {
-        data.entry(k).or_default().add_value(v);
-    }
+    let n_chunks = available_parallelism().unwrap().get();
+    let chunk_size = input_file.len() / n_chunks;
+    let data: DashMap<&[u8], Acc, BuildHasherDefault<FxHasher>> =
+        DashMap::with_capacity_and_hasher(1000, Default::default());
+
+    let mut remaining = input_file.as_slice();
+    std::thread::scope(|scope| {
+        while !remaining.is_empty() {
+            let (chunk, rem) =
+                split_on_inclusive_from(remaining, chunk_size, b'\n').unwrap_or((remaining, b""));
+            remaining = rem;
+            let data = &data;
+            let _: ScopedJoinHandle<_> = scope.spawn(move || {
+                for (k, v) in (Entries { inner: chunk }) {
+                    data.entry(k).or_default().add_value(v);
+                }
+            });
+        }
+    });
     let mut res = Vec::new();
     for (k, v) in data {
         res.push((k, v.into_res()));
