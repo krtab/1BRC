@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use fmmap::MmapFileExt;
 use rustc_hash::FxHasher;
 
-static INPUT: &str = "/home/arthur/1BRC/data/measurements.txt";
+static INPUT: &str = "/home/arthur/1BRC/data/measurements-10th.txt";
 
 struct Entries<'a> {
     inner: &'a [u8],
