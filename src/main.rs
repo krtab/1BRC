@@ -5,6 +5,7 @@ use std::{
 };
 
 use dashmap::DashMap;
+use fmmap::MmapFileExt;
 use rustc_hash::FxHasher;
 
 static INPUT: &str = "/home/arthur/1BRC/data/measurements.txt";
@@ -94,13 +95,15 @@ fn split_on_inclusive_from(s: &[u8], from: usize, c: u8) -> Option<(&[u8], &[u8]
 }
 
 fn main() {
-    let input_file = std::fs::read(INPUT).unwrap();
+    // let input_file = std::fs::read(INPUT).unwrap();
+    let input_file = fmmap::sync::MmapFile::open(INPUT).unwrap();
+    let input_file = input_file.as_slice();
     let n_chunks = available_parallelism().unwrap().get();
     let chunk_size = input_file.len() / n_chunks;
     let data: DashMap<&[u8], Acc, BuildHasherDefault<FxHasher>> =
         DashMap::with_capacity_and_hasher(1000, Default::default());
 
-    let mut remaining = input_file.as_slice();
+    let mut remaining = input_file;
     std::thread::scope(|scope| {
         while !remaining.is_empty() {
             let (chunk, rem) =
