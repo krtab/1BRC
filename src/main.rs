@@ -9,15 +9,19 @@ struct Entries<'a> {
     inner: &'a [u8],
 }
 
+fn split_on(s: &[u8], c: u8) -> Option<(&[u8], &[u8])> {
+    let index = s.iter().position(|&x| x == c)?;
+    Some((&s[..index], &s[index + 1..]))
+}
+
 impl<'a> Iterator for Entries<'a> {
     type Item = (&'a [u8], f32);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut it = self.inner.splitn(3, |&b| b == b';' || b == b'\n');
-        let k = it.next()?;
-        let v = it.next()?;
+        let (k, rest) = split_on(self.inner, b';')?;
+        let (v, rest) = split_on(rest, b'\n')?;
+        self.inner = rest;
         let v = fast_float::parse(v).expect("valid float");
-        self.inner = it.next().unwrap_or_default();
         Some((k, v))
     }
 }
