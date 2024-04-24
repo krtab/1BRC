@@ -18,39 +18,53 @@ fn split_on(s: &[u8], c: u8) -> Option<(&[u8], &[u8])> {
     Some((&s[..index], &s[index + 1..]))
 }
 
+fn parse_int(input: &[u8]) -> i32 {
+    let mut res = 0;
+    let mut sign = 1;
+    for &b in input {
+        match b {
+            b'-' => sign = -1,
+            b'0'..=b'9' => res = res * 10 + ((b - b'0') as i32),
+            b'.' => (),
+            _ => panic!("cannot parse int"),
+        }
+    }
+    res * sign
+}
+
 impl<'a> Iterator for Entries<'a> {
-    type Item = (&'a [u8], f32);
+    type Item = (&'a [u8], i32);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (k, rest) = split_on(self.inner, b';')?;
         let (v, rest) = split_on(rest, b'\n')?;
         self.inner = rest;
-        let v = fast_float::parse(v).expect("valid float");
+        let v = parse_int(v);
         Some((k, v))
     }
 }
 
 #[derive(Debug)]
 struct Acc {
-    min: f32,
-    sum: f32,
-    max: f32,
+    min: i32,
+    sum: i32,
+    max: i32,
     size: usize,
 }
 
 impl Default for Acc {
     fn default() -> Self {
         Self {
-            min: f32::MAX,
-            sum: 0.,
-            max: f32::MIN,
+            min: i32::MAX,
+            sum: 0,
+            max: i32::MIN,
             size: 0,
         }
     }
 }
 
 impl Acc {
-    fn add_value(&mut self, v: f32) {
+    fn add_value(&mut self, v: i32) {
         self.min = self.min.min(v);
         self.max = self.max.max(v);
         self.sum += v;
@@ -59,9 +73,9 @@ impl Acc {
 
     fn into_res(self) -> Res {
         Res {
-            max: self.max,
-            min: self.min,
-            avg: self.sum / (self.size as f32),
+            max: self.max as f32,
+            min: self.min as f32,
+            avg: self.sum as f32 / (self.size as f32),
             size: self.size,
         }
     }
