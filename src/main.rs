@@ -15,11 +15,47 @@ impl<'a> Iterator for Entries<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let mut it = self.inner.splitn(3, |&b| b == b';' || b == b'\n');
         let k = it.next()?;
-        // let k = std::str::from_utf8(k).expect("Correct uft8");
         let v = it.next()?;
         let v = fast_float::parse(v).expect("valid float");
         self.inner = it.next().unwrap_or_default();
         Some((k, v))
+    }
+}
+
+#[derive(Debug)]
+struct Acc {
+    min: f32,
+    sum: f32,
+    max: f32,
+    size: usize,
+}
+
+impl Default for Acc {
+    fn default() -> Self {
+        Self {
+            min: f32::MAX,
+            sum: 0.,
+            max: f32::MIN,
+            size: 0,
+        }
+    }
+}
+
+impl Acc {
+    fn add_value(&mut self, v: f32) {
+        self.min = self.min.min(v);
+        self.max = self.max.max(v);
+        self.sum += v;
+        self.size += 1;
+    }
+
+    fn into_res(self) -> Res {
+        Res {
+            max: self.max,
+            min: self.min,
+            avg: self.sum / (self.size as f32),
+            size: self.size,
+        }
     }
 }
 
@@ -32,31 +68,23 @@ struct Res {
 
 fn main() {
     let input_file = std::fs::read(INPUT).unwrap();
-    let mut data: Map<&[u8], Vec<f32>> = Default::default();
+    let mut data: Map<&[u8], Acc> = Default::default();
     for (k, v) in (Entries { inner: &input_file }) {
-        data.entry(k)
-            .or_insert_with(|| Vec::with_capacity(2000))
-            .push(v);
+        data.entry(k).or_default().add_value(v);
     }
     let mut res = Vec::new();
-    for (k, vs) in data {
-        let min = vs.iter().copied().reduce(|x, y| f32::min(x, y)).unwrap();
-        let max = vs.iter().copied().reduce(|x, y| f32::max(x, y)).unwrap();
-        let avg = vs.iter().sum::<f32>() / (vs.len() as f32);
-        res.push((
-            k,
-            Res {
-                min,
-                avg,
-                max,
-                size: vs.len(),
-            },
-        ));
+    for (k, v) in data {
+        res.push((k, v.into_res()));
     }
     res.sort_by_key(|(k, _)| *k);
     let mut stdout = stdout().lock();
     for (k, v) in res {
         stdout.write_all(k).unwrap();
-        writeln!(stdout, ": {:.1}/{:.1}/{:.1} ({})", v.min, v.avg, v.max, v.size).unwrap();
+        writeln!(
+            stdout,
+            ": {:.1}/{:.1}/{:.1} ({})",
+            v.min, v.avg, v.max, v.size
+        )
+        .unwrap();
     }
 }
