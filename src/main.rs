@@ -25,23 +25,34 @@ struct Res {
     min: f32,
     avg: f32,
     max: f32,
+    size: usize,
 }
 
 fn main() {
     let input_file = std::fs::read(INPUT).unwrap();
     let mut data: Map<&str, Vec<f32>> = Default::default();
     for (k, v) in (Entries { inner: &input_file }) {
-        data.entry(k).or_default().push(v);
+        data.entry(k)
+            .or_insert_with(|| Vec::with_capacity(2000))
+            .push(v);
     }
     let mut res = Vec::new();
     for (k, vs) in data {
         let min = vs.iter().copied().reduce(|x, y| f32::min(x, y)).unwrap();
         let max = vs.iter().copied().reduce(|x, y| f32::max(x, y)).unwrap();
         let avg = vs.iter().sum::<f32>() / (vs.len() as f32);
-        res.push((k, Res { min, avg, max }));
+        res.push((
+            k,
+            Res {
+                min,
+                avg,
+                max,
+                size: vs.len(),
+            },
+        ));
     }
     res.sort_by_key(|(k, _)| *k);
     for (k, v) in res {
-        println!("{k}: {:.1}/{:.1}/{:.1}", v.min, v.avg, v.max);
+        println!("{k}: {:.1}/{:.1}/{:.1} ({})", v.min, v.avg, v.max, v.size);
     }
 }
