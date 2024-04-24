@@ -19,13 +19,13 @@ fn split_on(s: &[u8], c: u8) -> Option<(&[u8], &[u8])> {
     Some((&s[..index], &s[index + 1..]))
 }
 
-fn parse_int(input: &[u8]) -> i32 {
+fn parse_int(input: &[u8]) -> i16 {
     let mut res = 0;
     let mut sign = 1;
     for &b in input {
         match b {
             b'-' => sign = -1,
-            b'0'..=b'9' => res = res * 10 + ((b - b'0') as i32),
+            b'0'..=b'9' => res = res * 10 + ((b - b'0') as i16),
             b'.' => (),
             _ => panic!("cannot parse int"),
         }
@@ -34,7 +34,7 @@ fn parse_int(input: &[u8]) -> i32 {
 }
 
 impl<'a> Iterator for Entries<'a> {
-    type Item = (&'a [u8], i32);
+    type Item = (&'a [u8], i16);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (k, rest) = split_on(self.inner, b';')?;
@@ -47,28 +47,28 @@ impl<'a> Iterator for Entries<'a> {
 
 #[derive(Debug)]
 struct Acc {
-    min: i32,
+    min: i16,
     sum: i32,
-    max: i32,
-    size: usize,
+    max: i16,
+    size: i32,
 }
 
 impl Default for Acc {
     fn default() -> Self {
         Self {
-            min: i32::MAX,
+            min: i16::MAX,
             sum: 0,
-            max: i32::MIN,
+            max: i16::MIN,
             size: 0,
         }
     }
 }
 
 impl Acc {
-    fn add_value(&mut self, v: i32) {
+    fn add_value(&mut self, v: i16) {
         self.min = self.min.min(v);
         self.max = self.max.max(v);
-        self.sum += v;
+        self.sum += v as i32;
         self.size += 1;
     }
 
@@ -86,7 +86,7 @@ struct Res {
     min: f32,
     avg: f32,
     max: f32,
-    size: usize,
+    size: i32,
 }
 
 fn split_on_inclusive_from(s: &[u8], from: usize, c: u8) -> Option<(&[u8], &[u8])> {
