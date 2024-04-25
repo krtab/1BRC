@@ -1,6 +1,7 @@
 use std::{
     hash::BuildHasherDefault,
     io::{stdout, Write},
+    ops::Neg,
     thread::{available_parallelism, ScopedJoinHandle},
 };
 
@@ -20,17 +21,31 @@ fn split_on(s: &[u8], c: u8) -> Option<(&[u8], &[u8])> {
 }
 
 fn parse_int(input: &[u8]) -> i16 {
-    let mut res = 0;
-    let mut sign = 1;
-    for &b in input {
-        match b {
-            b'-' => sign = -1,
-            b'0'..=b'9' => res = res * 10 + ((b - b'0') as i16),
-            b'.' => (),
-            _ => panic!("cannot parse int"),
+    let f = |idx, fact| parse_digit(input[idx]) * fact;
+    match input.len() {
+        5 => {
+            // -XX.X
+            (f(1, 100) + f(2, 10) + f(4, 1)).neg()
         }
+        4 => {
+            if input[0] == b'-' {
+                // -D.D
+                (f(1, 10) + f(3, 1)).neg()
+            } else {
+                // DD.D
+                f(0, 100) + f(1, 10) + f(3, 1)
+            }
+        }
+        3 => {
+            // D.D
+            f(0, 10) + f(2, 1)
+        }
+        _ => 0,
     }
-    res * sign
+}
+
+fn parse_digit(b: u8) -> i16 {
+    (b - b'0') as i16
 }
 
 impl<'a> Iterator for Entries<'a> {
@@ -74,8 +89,8 @@ impl Acc {
 
     fn into_res(self) -> Res {
         Res {
-            max: self.max as f32,
-            min: self.min as f32,
+            max: self.max as f32 / 10.,
+            min: self.min as f32 / 10.,
             avg: self.sum as f32 / (self.size as f32),
             size: self.size,
         }
