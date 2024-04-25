@@ -7,7 +7,7 @@ use std::{
 
 use dashmap::DashMap;
 use fmmap::MmapFileExt;
-use rustc_hash::FxHasher;
+use rustc_hash::{FxHashMap, FxHasher};
 
 static INPUT: &str = "/home/arthur/1BRC/data/measurements-10th.txt";
 
@@ -153,6 +153,13 @@ impl Acc {
         self.size += 1;
     }
 
+    fn add_acc(&mut self, other: &Self) {
+        self.min = self.min.min(other.min);
+        self.max = self.max.max(other.max);
+        self.sum += other.sum;
+        self.size += other.size;
+    }
+
     fn to_res(&self) -> Res {
         Res {
             max: self.max as f32 / 10.,
@@ -181,7 +188,7 @@ fn main() {
     let input_file = input_file.as_slice();
     let n_chunks = available_parallelism().unwrap().get();
     let chunk_size = input_file.len() / n_chunks;
-    let data: DashMap<StationId, Acc, BuildHasherDefault<FxHasher>> =
+    let global_map: DashMap<StationId, Acc, BuildHasherDefault<FxHasher>> =
         DashMap::with_capacity_and_hasher(1000, Default::default());
 
     let mut remaining = input_file;
@@ -190,16 +197,21 @@ fn main() {
             let (chunk, rem) =
                 split_on_inclusive_from(remaining, chunk_size, b'\n').unwrap_or((remaining, b""));
             remaining = rem;
-            let data = &data;
+            let global_map = &global_map;
             let _: ScopedJoinHandle<_> = scope.spawn(move || {
+                let mut local_map: FxHashMap<_, Acc> =
+                    FxHashMap::with_capacity_and_hasher(1000, Default::default());
                 for (k, v) in (Entries { inner: chunk }) {
-                    data.entry(k).or_default().add_value(v);
+                    local_map.entry(k).or_default().add_value(v);
+                }
+                for (k, v) in local_map {
+                    global_map.entry(k).or_default().add_acc(&v);
                 }
             });
         }
     });
     let mut res = Vec::new();
-    let data = data.into_read_only();
+    let data = global_map.into_read_only();
     for (k, v) in data.iter() {
         res.push((k.to_str(), v.to_res()));
     }
