@@ -48,9 +48,10 @@ fn parse_digit(b: u8) -> i16 {
     (b - b'0') as i16
 }
 
+const SHORT_WORDS: usize = 2;
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 struct ShortStationId {
-    inner: [u64; 2],
+    inner: [u64; SHORT_WORDS],
 }
 
 impl Hash for ShortStationId {
@@ -77,7 +78,7 @@ impl ShortStationId {
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        let mut inner: [u64; 2] = Default::default();
+        let mut inner: [u64; SHORT_WORDS] = Default::default();
 
         // dbg!(bytes.len(),std::mem::size_of_val(&inner));
         assert!(bytes.len() <= ShortStationId::max_size());
